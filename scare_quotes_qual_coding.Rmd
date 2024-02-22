@@ -1,0 +1,116 @@
+---
+title: "scare_quotes_qual_coding"
+author: "Drew Walker"
+date: "10/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(irr)
+library(janitor)
+library(table1)
+library(here)
+library(gt)
+```
+
+
+```{r read-and-clean-data}
+# Drew data cleaning
+raw_annotation_data_dw <- read_csv("reliability_sample_scare_quotes_Drew.csv") %>% 
+  clean_names()
+
+#Drew Data clean
+drew_data <- raw_annotation_data_dw %>% 
+  select(sentence_id,text,sentence,quoted_text,drew_scare = scare_quote,drew_comments = annotator_comments)
+
+# Annie data clean
+raw_annotation_data_annie <- read_csv("reliability_sample_scare_quotes_Annie.csv") %>% 
+  clean_names()
+
+annie_data <- raw_annotation_data_annie %>% 
+  select(sentence_id,annie_scare = scare_quote,annie_comments = annotator_comments,column1)
+
+
+#combined_data_clean
+combined_df_clean <- left_join(drew_data,annie_data, by = "sentence_id")
+
+
+```
+
+# Interrater kappas 
+
+
+```{r create-users-data-and-kappa}
+# Users df
+scare_annie <- annie_data %>% 
+  select(sentence_id,annie_scare)
+scare_drew <- drew_data %>% 
+  select(sentence_id,drew_scare)
+
+#Join
+kappa_scare_df <- left_join(scare_annie,scare_drew, by = "sentence_id") %>% 
+  select(drew_scare,annie_scare)
+
+kappa_scare_score <- irr::kappa2(kappa_scare_df)
+kappa_scare_score
+
+```
+
+# ID Disagreements 
+
+```{r disagreements}
+disagreement_df <- combined_df_clean %>% 
+  mutate(scare_agree = case_when(annie_scare== drew_scare~1,
+                                 TRUE~0))
+table(disagreement_df$scare_agree) 
+
+disagreements <- disagreement_df %>% 
+  filter(scare_agree == 0)
+gt(disagreements) %>% 
+  tab_header("Scare Quote Disagreements")%>% 
+  gtsave("Scare_Quote_disagreements.html", inline_css = TRUE, 
+         path = here())
+
+agreements <- disagreement_df %>% 
+  filter(scare_agree == 1) %>% 
+  mutate(scare_label = drew_scare)
+
+table(agreements$drew_scare)
+
+write_csv(disagreements, "scare_quote_disagreements_to_adjudicate.csv")
+
+
+```
+
+# Adjudications
+
+```{r adjudications}
+
+adjudications <- read_csv("completed_scare_quote_disagreements_to_adjudicate.csv") %>% 
+  filter(!is.na(sentence_id)) 
+adjudications$column1 <- as.character(adjudications$column1)
+agreements$column1 <- as.character(agreements$column1)
+gold_standard_scare_quotes <- bind_rows(agreements,adjudications)
+
+gold_standard_scare_quotes_clean <- gold_standard_scare_quotes %>% 
+  select(sentence_id,sentence,quoted_text,scare_label)
+write_csv(gold_standard_scare_quotes_clean, "gold_standard_scare_quotes_100.csv")
+
+```
+
+# Testing with annie round two, before adjudications
+
+```{r round-2-classifier}
+annie_round_2 <- read_csv("completed_annotation_Annie_sample_scare_quotes.csv")
+
+
+annie_round_2_clean <- annie_round_2 %>% 
+  select(sentence_id = `Sentence ID`, sentence = Sentence, quoted_text, scare_label = scare_quote)
+
+gold_standard_500 <- bind_rows(gold_standard_scare_quotes_clean,annie_round_2_clean)
+
+write_csv(gold_standard_500, "gold_standard_scare_quotes_500.csv")
+```
+
