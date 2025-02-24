@@ -7,4 +7,6 @@ Sentence-level matching was conducted on expanded lexicons for doubt markers and
 These tools are available to other researchers and were developed as part of Drew Walker's doctoral dissertation at Emory University's Department of Behavioral, Social, and Health Education Sciences.
 
 Please reference our citation below when using these tools in future work:
-<Citation>
+
+Walker D, Thorne A, Das S, et al. CARE-SD: Classifier-based analysis for recognizing and eliminating stigmatizing and doubt marker labels in electronic health records: model development and validation. Published online May 8, 2024. doi:10.48550/arXiv.2405.05204
+
